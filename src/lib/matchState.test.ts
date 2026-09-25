@@ -104,9 +104,9 @@ describe('suggestions', () => {
     expect(suggestOn(['c', 'd', 'e'], { c: 0, d: 0, e: 5 * MIN }, ctx)).toEqual(['d', 'c', 'e']);
   });
 
-  it('suggests the outfield player with the most minutes to come off, keeper last', () => {
+  it('suggests the player with the most minutes to come off', () => {
     const ms = { a: 20 * MIN, b: 10 * MIN, k: 30 * MIN };
-    expect(suggestOff(['a', 'b', 'k'], ms, ctx, 'k')).toEqual(['a', 'b', 'k']);
+    expect(suggestOff(['a', 'b', 'k'], ms, ctx)).toEqual(['k', 'a', 'b']);
   });
 
   it('computes fair share', () => {

@@ -33,7 +33,6 @@ export interface Match {
   presentIds: string[];
   /** Starting lineup chosen before kick-off. */
   lineupIds: string[];
-  keeperId?: string;
   events: MatchEvent[];
   finished: boolean;
   createdAt: number;

@@ -132,17 +132,11 @@ export function suggestOn(bench: string[], playerMs: Record<string, number>, ctx
 
 /**
  * On-pitch players ordered by who should come off next: most minutes this
- * game first. The goalkeeper is always suggested last.
+ * game first.
  */
-export function suggestOff(
-  onPitch: string[],
-  playerMs: Record<string, number>,
-  ctx: SeasonContext,
-  keeperId?: string,
-): string[] {
+export function suggestOff(onPitch: string[], playerMs: Record<string, number>, ctx: SeasonContext): string[] {
   return [...onPitch].sort(
     (a, b) =>
-      Number(a === keeperId) - Number(b === keeperId) ||
       (playerMs[b] ?? 0) - (playerMs[a] ?? 0) ||
       (ctx.seasonMs[b] ?? 0) - (ctx.seasonMs[a] ?? 0),
   );

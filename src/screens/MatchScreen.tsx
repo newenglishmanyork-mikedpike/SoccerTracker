@@ -66,10 +66,7 @@ function MatchView({
       ...m,
       presentIds: isPresent ? [...m.presentIds.filter((p) => p !== id), id] : m.presentIds.filter((p) => p !== id),
       lineupIds: isPresent ? m.lineupIds : m.lineupIds.filter((p) => p !== id),
-      keeperId: !isPresent && m.keeperId === id ? undefined : m.keeperId,
     }));
-
-  const toggleKeeper = (id: string) => update((m) => ({ ...m, keeperId: m.keeperId === id ? undefined : id }));
 
   const lastEvent = match.events[match.events.length - 1];
 
@@ -160,7 +157,6 @@ function MatchView({
             }
             setLineup={(ids) => update((m) => ({ ...m, lineupIds: ids }))}
             setPresent={setPresent}
-            toggleKeeper={toggleKeeper}
           />
         ) : (
           <Live
@@ -177,7 +173,6 @@ function MatchView({
               else setSheet({ mode: 'on', playerId: id });
             }}
             setPresent={setPresent}
-            toggleKeeper={toggleKeeper}
           />
         )}
       </main>
@@ -186,7 +181,6 @@ function MatchView({
         <SubSheet
           sheet={sheet}
           s={s}
-          match={match}
           present={present}
           byId={byId}
           ctx={ctx}
@@ -251,7 +245,6 @@ function Setup({
   toggleLineup,
   setLineup,
   setPresent,
-  toggleKeeper,
 }: {
   match: Match;
   present: string[];
@@ -263,15 +256,13 @@ function Setup({
   toggleLineup: (id: string) => void;
   setLineup: (ids: string[]) => void;
   setPresent: (id: string, present: boolean) => void;
-  toggleKeeper: (id: string) => void;
 }) {
   const suggestLineup = () => {
-    // Fewest starts first, then fewest season minutes. Keep the chosen keeper in.
-    const keeper = match.keeperId && present.includes(match.keeperId) ? [match.keeperId] : [];
-    const rest = present
-      .filter((id) => !keeper.includes(id))
-      .sort((a, b) => (ctxStarts[a] ?? 0) - (ctxStarts[b] ?? 0) || (ctxMs[a] ?? 0) - (ctxMs[b] ?? 0));
-    setLineup([...keeper, ...rest].slice(0, match.onField));
+    // Fewest starts first, then fewest season minutes.
+    const ranked = [...present].sort(
+      (a, b) => (ctxStarts[a] ?? 0) - (ctxStarts[b] ?? 0) || (ctxMs[a] ?? 0) - (ctxMs[b] ?? 0),
+    );
+    setLineup(ranked.slice(0, match.onField));
   };
 
   return (
@@ -304,17 +295,6 @@ function Setup({
               <Shirt p={p} />
               <span className="grow name">{p?.name}</span>
               <span className="muted small">{ctxStarts[id] ?? 0} starts</span>
-              {selected && (
-                <button
-                  className={`chip ${match.keeperId === id ? 'on' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleKeeper(id);
-                  }}
-                >
-                  GK
-                </button>
-              )}
               <button
                 className="btn small ghost"
                 onClick={(e) => {
@@ -389,7 +369,6 @@ function Live({
   onSubTap,
   onBenchTap,
   setPresent,
-  toggleKeeper,
 }: {
   match: Match;
   s: MatchState;
@@ -401,11 +380,10 @@ function Live({
   onSubTap: (id: string) => void;
   onBenchTap: (id: string) => void;
   setPresent: (id: string, present: boolean) => void;
-  toggleKeeper: (id: string) => void;
 }) {
   const bench = present.filter((id) => !s.onPitch.includes(id));
   const benchOrder = suggestOn(bench, s.playerMs, ctx);
-  const offOrder = suggestOff(s.onPitch, s.playerMs, ctx, match.keeperId);
+  const offOrder = suggestOff(s.onPitch, s.playerMs, ctx);
   const nextOff = bench.length > 0 ? offOrder[0] : undefined;
   const fair = fairShareMs(match.onField, s.clockMs, present.length);
   const short = match.onField - s.onPitch.length;
@@ -433,9 +411,6 @@ function Live({
                 </div>
                 <MinutesBar ms={s.playerMs[id] ?? 0} fair={fair} />
               </div>
-              <button className={`chip ${match.keeperId === id ? 'on' : ''}`} onClick={() => toggleKeeper(id)}>
-                GK
-              </button>
               <button className="btn goal" onClick={() => onGoal(id)} aria-label={`Goal for ${p?.name}`}>
                 ⚽{goals > 0 && <span className="goal-count">{goals}</span>}
               </button>
@@ -484,7 +459,6 @@ function Live({
 function SubSheet({
   sheet,
   s,
-  match,
   present,
   byId,
   ctx,
@@ -494,7 +468,6 @@ function SubSheet({
 }: {
   sheet: NonNullable<Sheet>;
   s: MatchState;
-  match: Match;
   present: string[];
   byId: Map<string, Player>;
   ctx: ReturnType<typeof seasonContext>;
@@ -505,7 +478,7 @@ function SubSheet({
   const subject = byId.get(sheet.playerId)?.name;
   const bench = present.filter((id) => !s.onPitch.includes(id));
   const options =
-    sheet.mode === 'off' ? suggestOn(bench, s.playerMs, ctx) : suggestOff(s.onPitch, s.playerMs, ctx, match.keeperId);
+    sheet.mode === 'off' ? suggestOn(bench, s.playerMs, ctx) : suggestOff(s.onPitch, s.playerMs, ctx);
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -525,7 +498,6 @@ function SubSheet({
                 <span className="grow name-line">
                   <span className="name">{p?.name}</span>
                   {i === 0 && <span className="badge on">Suggested</span>}
-                  {match.keeperId === id && <span className="badge">GK</span>}
                 </span>
                 <span className="mins">{mins(s.playerMs[id] ?? 0)}</span>
               </li>

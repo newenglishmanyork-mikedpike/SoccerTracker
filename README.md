@@ -5,7 +5,7 @@ so every player gets fair game time across a match and a season.
 
 - **Squad** – enter your players once.
 - **Match setup** – mark who's here (late arrivals can be added any time), pick the starting lineup
-  (or tap *Suggest* to pick the players with the fewest starts this season) and optionally a goalkeeper.
+  (or tap *Suggest* to pick the players with the fewest starts this season).
 - **Live match** – running clock and score, tap ⚽ when someone scores, tap *Sub* to swap players.
   The bench is ordered by who has played least, with **Next on** / **Next off** suggestions,
   and each player's minutes are shown against the team's fair share. *Undo* reverses the last action.

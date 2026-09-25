@@ -92,11 +92,6 @@ h2 { font-size: 1.05rem; margin: 0; }
   border-radius: 999px; font-size: 0.75rem; min-width: 20px; height: 20px; line-height: 20px; text-align: center;
 }
 .btn.sub { min-width: 72px; }
-.chip {
-  border: 1px solid var(--border); background: transparent; color: var(--muted);
-  border-radius: 999px; padding: 4px 8px; font-size: 0.75rem; font-weight: 700; min-height: 32px; cursor: pointer;
-}
-.chip.on { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
 
 /* Forms */
 .input {
