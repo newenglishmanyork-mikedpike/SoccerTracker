@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { db, newId } from '../db';
+import { addPlayer, updatePlayer } from '../data';
+import { db } from '../db';
 import type { Player } from '../types';
 
 export default function SquadScreen() {
@@ -20,7 +21,7 @@ export default function SquadScreen() {
     const n = parseInt(number, 10);
     setName('');
     setNumber('');
-    await db.players.add({ id: newId(), name: trimmed, number: isNaN(n) ? undefined : n, createdAt: Date.now() });
+    await addPlayer({ name: trimmed, number: isNaN(n) ? undefined : n });
   };
 
   return (
@@ -65,7 +66,7 @@ export default function SquadScreen() {
               <button className="btn small ghost" onClick={() => setEditing(p.id)}>
                 Edit
               </button>
-              <button className="btn small ghost" onClick={() => db.players.update(p.id, { archived: true })}>
+              <button className="btn small ghost" onClick={() => updatePlayer(p.id, { archived: true })}>
                 Remove
               </button>
             </li>
@@ -84,7 +85,7 @@ export default function SquadScreen() {
                 <li key={p.id} className="row dim">
                   <span className="shirt">{p.number ?? ''}</span>
                   <span className="grow name">{p.name}</span>
-                  <button className="btn small ghost" onClick={() => db.players.update(p.id, { archived: false })}>
+                  <button className="btn small ghost" onClick={() => updatePlayer(p.id, { archived: false })}>
                     Restore
                   </button>
                 </li>
@@ -104,7 +105,7 @@ function EditRow({ player, onDone }: { player: Player; onDone: () => void }) {
     e.preventDefault();
     if (!name.trim()) return;
     const n = parseInt(number, 10);
-    await db.players.update(player.id, { name: name.trim(), number: isNaN(n) ? undefined : n });
+    await updatePlayer(player.id, { name: name.trim(), number: isNaN(n) ? undefined : n });
     onDone();
   };
   return (

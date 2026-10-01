@@ -12,8 +12,11 @@ so every player gets fair game time across a match and a season.
 - **Season** – games, starts, total/average minutes and goals per player, with players falling
   behind highlighted. Download a JSON backup or a CSV of the stats.
 
-Works offline and can be installed to the home screen (it's a PWA). All data is stored on the device
-(IndexedDB) — use *Download backup* regularly.
+- **Account** – sign in to sync the squad and matches between devices; download/restore a backup.
+
+Works offline and can be installed to the home screen (it's a PWA). Data is always saved on the device
+first (IndexedDB), so the app works pitchside with no signal. When signed in, changes sync through
+Firebase and are queued while offline. If two devices edit the same player or match, the latest edit wins.
 
 ## Development
 
@@ -37,3 +40,22 @@ don't count, and undo simply drops the last event.
 
 `.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`.
 Enable it once under **Settings → Pages → Source: GitHub Actions**.
+
+## Setting up sync (Firebase, free tier)
+
+Without this the app still works, but each device keeps its own data.
+
+1. Go to <https://console.firebase.google.com>, **Create a project** (Google Analytics not needed).
+2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable → Save.**
+3. **Build → Firestore Database → Create database**, pick a location near you, start in **production mode**.
+   Then open its **Rules** tab, replace the contents with [`firestore.rules`](firestore.rules) and **Publish**.
+4. **Project settings (⚙) → General → Your apps → Web (`</>`)**, register an app (no Hosting needed),
+   and copy the `firebaseConfig = { ... }` snippet it shows.
+5. In GitHub: **Settings → Secrets and variables → Actions → Variables → New repository variable**,
+   name `FIREBASE_CONFIG`, paste the snippet as the value.
+6. Re-run the **Deploy to GitHub Pages** workflow (Actions tab). The app now shows an **Account** sign-in.
+
+The Firebase web config isn't secret — access is protected by sign-in and the Firestore rules, which
+only let each account read and write its own data (`users/{uid}/...`).
+
+To build locally with sync, put the snippet in `.env.local` as `VITE_FIREBASE_CONFIG=...`.

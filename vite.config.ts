@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // domain root and under a sub-path such as GitHub Pages (/SoccerTracker/).
 export default defineConfig({
   base: './',
+  // The Firebase SDK is a separate chunk, only loaded when sync is configured.
+  build: { chunkSizeWarningLimit: 700 },
   plugins: [
     react(),
     VitePWA({

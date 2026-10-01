@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { db, newId } from '../db';
+import { addMatch, deleteMatch } from '../data';
+import { db } from '../db';
 import { prettyDate, today } from '../lib/format';
 import { computeMatchState } from '../lib/matchState';
 
@@ -17,9 +18,7 @@ export default function MatchesScreen({ onOpen }: { onOpen: (id: string) => void
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     const players = await db.players.filter((p) => !p.archived).toArray();
-    const id = newId();
-    await db.matches.add({
-      id,
+    const id = await addMatch({
       date,
       opponent: opponent.trim() || 'Opponent',
       onField: onField ?? defaultOnField,
@@ -27,7 +26,6 @@ export default function MatchesScreen({ onOpen }: { onOpen: (id: string) => void
       lineupIds: [],
       events: [],
       finished: false,
-      createdAt: Date.now(),
     });
     setCreating(false);
     setOpponent('');
@@ -36,7 +34,7 @@ export default function MatchesScreen({ onOpen }: { onOpen: (id: string) => void
 
   const remove = async (id: string, label: string) => {
     if (confirm(`Delete the match vs ${label}? Its minutes and goals will be removed from season stats.`)) {
-      await db.matches.delete(id);
+      await deleteMatch(id);
     }
   };
 

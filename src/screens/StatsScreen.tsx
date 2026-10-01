@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo, useRef, useState } from 'react';
-import { db, exportBackup, importBackup } from '../db';
+import { useMemo, useState } from 'react';
+import { db } from '../db';
 import { download, today } from '../lib/format';
 import { computeSeasonStats, seasonCsv } from '../lib/seasonStats';
 
@@ -10,7 +10,6 @@ export default function StatsScreen() {
   const players = useLiveQuery(() => db.players.orderBy('createdAt').toArray(), []) ?? [];
   const matches = useLiveQuery(() => db.matches.toArray(), []) ?? [];
   const [sort, setSort] = useState<SortKey>('ms');
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const stats = useMemo(() => computeSeasonStats(matches, Date.now()), [matches]);
   const played = matches.filter((m) => m.events.some((e) => e.type === 'PERIOD_START')).length;
@@ -36,19 +35,6 @@ export default function StatsScreen() {
       {label}
     </th>
   );
-
-  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (!confirm('Restoring a backup replaces all players and matches on this device. Continue?')) return;
-    try {
-      await importBackup(JSON.parse(await file.text()));
-      alert('Backup restored.');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not read that file.');
-    }
-  };
 
   return (
     <div className="screen">
@@ -98,31 +84,16 @@ export default function StatsScreen() {
         </>
       )}
 
-      <h2 className="section-title">Your data</h2>
-      <p className="hint">
-        Everything is stored on this device only. Download a backup regularly so you don't lose your season.
-      </p>
-      <div className="actions wrap">
-        <button
-          className="btn"
-          onClick={async () =>
-            download(`soccer-backup-${today()}.json`, JSON.stringify(await exportBackup(), null, 2), 'application/json')
-          }
-        >
-          Download backup
-        </button>
-        <button className="btn" onClick={() => fileRef.current?.click()}>
-          Restore backup
-        </button>
-        <button
-          className="btn"
-          disabled={rows.length === 0}
-          onClick={() => download(`season-stats-${today()}.csv`, seasonCsv(players, stats), 'text/csv')}
-        >
-          Export CSV
-        </button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onImport} />
-      </div>
+      {rows.length > 0 && (
+        <div className="actions wrap">
+          <button
+            className="btn"
+            onClick={() => download(`season-stats-${today()}.csv`, seasonCsv(players, stats), 'text/csv')}
+          >
+            Export CSV
+          </button>
+        </div>
+      )}
     </div>
   );
 }

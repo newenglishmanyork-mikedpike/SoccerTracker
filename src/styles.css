@@ -199,3 +199,19 @@ h2 { font-size: 1.05rem; margin: 0; }
 .stats th { font-size: 0.8rem; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
 .stats th.sorted { color: var(--primary); }
 .stats tr:last-child td { border-bottom: none; }
+
+/* Sync */
+.banner {
+  display: flex; align-items: center; gap: 12px; max-width: 720px; margin: 12px auto 0;
+  padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); font-size: 0.9rem;
+  width: calc(100% - 32px);
+}
+.card h2 { margin-bottom: 4px; }
+.sync-card { display: flex; flex-direction: column; gap: 4px; }
+.sync-line { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-weight: 600; }
+.dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.dot.synced { background: var(--primary); }
+.dot.syncing { background: var(--warn); }
+.dot.offline { background: var(--muted); }
+.dot.error { background: var(--off); }
+.error { color: var(--off); font-size: 0.9rem; margin: 0; }
