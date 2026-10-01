@@ -215,3 +215,6 @@ h2 { font-size: 1.05rem; margin: 0; }
 .dot.offline { background: var(--muted); }
 .dot.error { background: var(--off); }
 .error { color: var(--off); font-size: 0.9rem; margin: 0; }
+.btn.google { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.8rem; }
+.divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
