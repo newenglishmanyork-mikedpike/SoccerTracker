@@ -1,5 +1,14 @@
+export interface Team {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
 export interface Player {
   id: string;
+  /** Missing on records from before teams existed: they belong to the default team. */
+  teamId?: string;
   name: string;
   number?: number;
   /** Archived players are hidden from new matches but keep their history. */
@@ -27,6 +36,8 @@ export type MatchEvent =
 
 export interface Match {
   id: string;
+  /** Missing on records from before teams existed: they belong to the default team. */
+  teamId?: string;
   /** ISO date, yyyy-mm-dd */
   date: string;
   opponent: string;

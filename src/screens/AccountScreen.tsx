@@ -61,11 +61,32 @@ function SyncCard({ status }: { status: SyncStatus }) {
         and matches.
       </p>
       <div className="actions">
-        <button className="btn ghost" onClick={() => signOut()}>
-          Sign out
-        </button>
+        <SignOutButton />
       </div>
     </div>
+  );
+}
+
+function SignOutButton() {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!confirm('Sign out? Your teams will be removed from this device. They stay safe in your account.')) return;
+    setBusy(true);
+    try {
+      if ((await signOut(false)) === 'pending') {
+        const force = confirm(
+          'Some changes haven’t reached the cloud yet (are you offline?). If you sign out now they’ll be lost. Sign out anyway?',
+        );
+        if (force) await signOut(true);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button className="btn ghost" onClick={run} disabled={busy}>
+      {busy ? 'Signing out…' : 'Sign out'}
+    </button>
   );
 }
 

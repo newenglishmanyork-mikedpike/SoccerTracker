@@ -2,7 +2,8 @@ import { firebaseConfig, useEmulators } from './config';
 import { setSyncStatus } from './status';
 
 type Engine = typeof import('./engine');
-export type { SyncTable } from './engine';
+import type { SyncTable } from './engine';
+export type { SyncTable };
 
 let engine: Promise<Engine> | null = null;
 
@@ -22,11 +23,11 @@ export function initSync(): void {
   engine.catch((err) => setSyncStatus({ state: 'error', error: String(err) }));
 }
 
-export function pushRecord(table: 'players' | 'matches', rec: { id: string }): void {
+export function pushRecord(table: SyncTable, rec: { id: string }): void {
   engine?.then((e) => e.push(table, rec)).catch(() => {});
 }
 
-export function pushDeletion(table: 'players' | 'matches', id: string, updatedAt: number): void {
+export function pushDeletion(table: SyncTable, id: string, updatedAt: number): void {
   engine?.then((e) => e.pushDeletion(table, id, updatedAt)).catch(() => {});
 }
 
@@ -38,7 +39,7 @@ async function withEngine<T>(fn: (e: Engine) => Promise<T>): Promise<T> {
 export const signIn = (email: string, password: string) => withEngine((e) => e.signIn(email, password));
 export const signInWithGoogle = () => withEngine((e) => e.signInWithGoogle());
 export const signUp = (email: string, password: string) => withEngine((e) => e.signUp(email, password));
-export const signOut = () => withEngine((e) => e.signOut());
+export const signOut = (force = false) => withEngine((e) => e.signOut(force));
 export const resetPassword = (email: string) => withEngine((e) => e.resetPassword(email));
 
 /** Turn Firebase auth error codes into something a coach can act on. */

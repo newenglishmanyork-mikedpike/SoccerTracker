@@ -19,6 +19,7 @@ import {
   type User,
 } from 'firebase/auth';
 import {
+  clearIndexedDbPersistence,
   collection,
   connectFirestoreEmulator,
   doc,
@@ -27,16 +28,18 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
   setDoc,
+  terminate,
+  waitForPendingWrites,
   type Firestore,
   type QuerySnapshot,
 } from 'firebase/firestore';
-import { db } from '../db';
+import { clearLocalData, db } from '../db';
 import type { FirebaseWebConfig } from './config';
 import { decide, type RemoteRecord } from './merge';
 import { getSyncStatus, setSyncStatus } from './status';
 
-export type SyncTable = 'players' | 'matches';
-const TABLES: SyncTable[] = ['players', 'matches'];
+export type SyncTable = 'teams' | 'players' | 'matches';
+const TABLES: SyncTable[] = ['teams', 'players', 'matches'];
 
 type Rec = RemoteRecord & { id: string };
 
@@ -45,6 +48,7 @@ let fs: Firestore;
 let user: User | null = null;
 let stopListeners: (() => void)[] = [];
 const meta: Record<SyncTable, { fromCache: boolean; pending: boolean }> = {
+  teams: { fromCache: true, pending: false },
   players: { fromCache: true, pending: false },
   matches: { fromCache: true, pending: false },
 };
@@ -66,7 +70,7 @@ export function init(config: FirebaseWebConfig, emulators: boolean): void {
   onAuthStateChanged(auth, (u) => {
     stop();
     user = u;
-    if (u) start(u);
+    if (u) start(u).catch(fail);
     else setSyncStatus({ state: 'signedOut' });
   });
 }
@@ -84,8 +88,17 @@ function col(uid: string, table: SyncTable) {
   return collection(fs, 'users', uid, table);
 }
 
-function start(u: User): void {
+async function start(u: User): Promise<void> {
   setSyncStatus({ state: 'syncing', email: u.email ?? undefined });
+
+  // Data left on this device by a different account must never be uploaded
+  // into this one. (Normal sign-out already wipes it; this is a safety net.)
+  // Data that was never synced (no owner yet) is merged in on first sign-in.
+  const owner = (await db.meta.get('ownerUid'))?.value;
+  if (owner && owner !== u.uid) await clearLocalData();
+  await db.meta.put({ key: 'ownerUid', value: u.uid });
+  if (user !== u) return; // signed out again while we were busy
+
   for (const table of TABLES) {
     meta[table] = { fromCache: true, pending: false };
     let reconciled = false;
@@ -196,8 +209,27 @@ export async function signUp(email: string, password: string): Promise<void> {
   await createUserWithEmailAndPassword(auth, email, password);
 }
 
-export async function signOut(): Promise<void> {
+/**
+ * Sign out and remove this account's data from the device, so the next
+ * person to use it starts clean. Returns 'pending' (and does nothing) if
+ * some changes haven't reached the cloud yet, unless `force` is set.
+ */
+export async function signOut(force: boolean): Promise<'pending' | 'done'> {
+  if (!force) {
+    const flushed = await Promise.race([
+      waitForPendingWrites(fs).then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000)),
+    ]);
+    if (!flushed) return 'pending';
+  }
+  stop();
   await fbSignOut(auth);
+  await terminate(fs);
+  await clearIndexedDbPersistence(fs).catch(() => {});
+  await clearLocalData();
+  // Start fresh so Firestore and the UI hold nothing from the old account.
+  location.reload();
+  return 'done';
 }
 
 export async function resetPassword(email: string): Promise<void> {
