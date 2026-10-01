@@ -12,7 +12,7 @@ so every player gets fair game time across a match and a season.
 - **Season** – games, starts, total/average minutes and goals per player, with players falling
   behind highlighted. Download a JSON backup or a CSV of the stats.
 
-- **Account** – sign in to sync the squad and matches between devices; download/restore a backup.
+- **Account** – sign in (Google or email/password) to sync the squad and matches between devices; download/restore a backup.
 
 Works offline and can be installed to the home screen (it's a PWA). Data is always saved on the device
 first (IndexedDB), so the app works pitchside with no signal. When signed in, changes sync through
@@ -46,7 +46,11 @@ Enable it once under **Settings → Pages → Source: GitHub Actions**.
 Without this the app still works, but each device keeps its own data.
 
 1. Go to <https://console.firebase.google.com>, **Create a project** (Google Analytics not needed).
-2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable → Save.**
+2. **Build → Authentication → Get started → Sign-in method**:
+   - **Email/Password → Enable → Save.**
+   - **Add new provider → Google → Enable**, pick a support email, **Save**.
+   - Then **Settings → Authorized domains → Add domain**: `<your-github-username>.github.io`
+     (needed for Google sign-in).
 3. **Build → Firestore Database → Create database**, pick a location near you, start in **production mode**.
    Then open its **Rules** tab, replace the contents with [`firestore.rules`](firestore.rules) and **Publish**.
 4. **Project settings (⚙) → General → Your apps → Web (`</>`)**, register an app (no Hosting needed),

@@ -9,9 +9,11 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as fbSignOut,
   type Auth,
   type User,
@@ -180,6 +182,14 @@ export function pushDeletion(table: SyncTable, id: string, updatedAt: number): v
 
 export async function signIn(email: string, password: string): Promise<void> {
   await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  // A popup rather than a redirect: redirects break on sites (like GitHub
+  // Pages) whose domain differs from the Firebase auth domain.
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  await signInWithPopup(auth, provider);
 }
 
 export async function signUp(email: string, password: string): Promise<void> {

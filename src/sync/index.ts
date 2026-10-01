@@ -36,6 +36,7 @@ async function withEngine<T>(fn: (e: Engine) => Promise<T>): Promise<T> {
 }
 
 export const signIn = (email: string, password: string) => withEngine((e) => e.signIn(email, password));
+export const signInWithGoogle = () => withEngine((e) => e.signInWithGoogle());
 export const signUp = (email: string, password: string) => withEngine((e) => e.signUp(email, password));
 export const signOut = () => withEngine((e) => e.signOut());
 export const resetPassword = (email: string) => withEngine((e) => e.resetPassword(email));
@@ -58,6 +59,22 @@ export function authErrorMessage(err: unknown): string {
       return 'Enter a password.';
     case 'auth/network-request-failed':
       return 'No connection. Try again when you’re online.';
+    case 'auth/internal-error':
+      return 'Couldn’t reach Google sign-in. Check your connection and try again, or use email and password.';
+    case 'auth/popup-blocked':
+      return 'The Google sign-in window was blocked. Allow pop-ups for this site and try again.';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return '';
+    case 'auth/operation-not-supported-in-this-environment':
+    case 'auth/web-storage-unsupported':
+      return 'Google sign-in isn’t supported here. Use email and password instead.';
+    case 'auth/unauthorized-domain':
+      return 'Google sign-in isn’t enabled for this website yet (add it to Authorized domains in Firebase).';
+    case 'auth/operation-not-allowed':
+      return 'This sign-in method isn’t turned on in Firebase yet.';
+    case 'auth/account-exists-with-different-credential':
+      return 'This email already has an account with a password. Sign in with your email and password instead.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Wait a few minutes and try again.';
     default:
