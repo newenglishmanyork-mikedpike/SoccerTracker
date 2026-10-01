@@ -3,6 +3,8 @@
 A phone-friendly web app for youth soccer coaches to track **starting lineups, minutes played and goals**,
 so every player gets fair game time across a match and a season.
 
+- **Teams** – coach more than one team? Switch with the team button at the top; each team has its own
+  squad, matches and season stats.
 - **Squad** – enter your players once.
 - **Match setup** – mark who's here (late arrivals can be added any time), pick the starting lineup
   (or tap *Suggest* to pick the players with the fewest starts this season).
@@ -17,6 +19,8 @@ so every player gets fair game time across a match and a season.
 Works offline and can be installed to the home screen (it's a PWA). Data is always saved on the device
 first (IndexedDB), so the app works pitchside with no signal. When signed in, changes sync through
 Firebase and are queued while offline. If two devices edit the same player or match, the latest edit wins.
+Each account's data is private to it, so other coaches can use the same site with their own login.
+Signing out removes the account's data from that device (it stays in the cloud).
 
 ## Development
 

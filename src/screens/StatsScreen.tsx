@@ -3,12 +3,22 @@ import { useMemo, useState } from 'react';
 import { db } from '../db';
 import { download, today } from '../lib/format';
 import { computeSeasonStats, seasonCsv } from '../lib/seasonStats';
+import { teamOf } from '../teams';
+import type { Team } from '../types';
 
 type SortKey = 'name' | 'games' | 'starts' | 'ms' | 'avg' | 'goals';
 
-export default function StatsScreen() {
-  const players = useLiveQuery(() => db.players.orderBy('createdAt').toArray(), []) ?? [];
-  const matches = useLiveQuery(() => db.matches.toArray(), []) ?? [];
+export default function StatsScreen({ team }: { team: Team }) {
+  const players =
+    useLiveQuery(
+      () =>
+        db.players
+          .orderBy('createdAt')
+          .filter((p) => teamOf(p) === team.id)
+          .toArray(),
+      [team.id],
+    ) ?? [];
+  const matches = useLiveQuery(() => db.matches.filter((m) => teamOf(m) === team.id).toArray(), [team.id]) ?? [];
   const [sort, setSort] = useState<SortKey>('ms');
 
   const stats = useMemo(() => computeSeasonStats(matches, Date.now()), [matches]);
@@ -88,7 +98,7 @@ export default function StatsScreen() {
         <div className="actions wrap">
           <button
             className="btn"
-            onClick={() => download(`season-stats-${today()}.csv`, seasonCsv(players, stats), 'text/csv')}
+            onClick={() => download(`${team.name.replace(/[^\w-]+/g, '-')}-stats-${today()}.csv`, seasonCsv(players, stats), 'text/csv')}
           >
             Export CSV
           </button>

@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import TeamBar from './components/TeamBar';
+import { ensureDefaultTeam } from './data';
 import AccountScreen from './screens/AccountScreen';
 import MatchesScreen from './screens/MatchesScreen';
 import MatchScreen from './screens/MatchScreen';
 import SquadScreen from './screens/SquadScreen';
 import StatsScreen from './screens/StatsScreen';
 import { useSyncStatus } from './sync/status';
+import { useTeams } from './teams';
 
 type Tab = 'matches' | 'squad' | 'stats' | 'account';
 
@@ -21,6 +24,11 @@ function readOpenMatch(): string | null {
 export default function App() {
   const [tab, setTab] = useState<Tab>('matches');
   const sync = useSyncStatus();
+  const teams = useTeams();
+
+  useEffect(() => {
+    if (teams && teams.teams.length === 0) ensureDefaultTeam();
+  }, [teams]);
   // Remember the open match so a refresh mid-game lands back on it.
   const [openMatchId, setOpenMatchIdState] = useState<string | null>(readOpenMatch);
 
@@ -38,8 +46,11 @@ export default function App() {
     return <MatchScreen matchId={openMatchId} onBack={() => setOpenMatchId(null)} />;
   }
 
+  const team = teams?.active;
+
   return (
     <div className="app">
+      {teams && tab !== 'account' && <TeamBar state={teams} />}
       <main className="content">
         {sync.state === 'signedOut' && tab !== 'account' && (
           <div className="banner">
@@ -49,9 +60,10 @@ export default function App() {
             </button>
           </div>
         )}
-        {tab === 'matches' && <MatchesScreen onOpen={setOpenMatchId} />}
-        {tab === 'squad' && <SquadScreen />}
-        {tab === 'stats' && <StatsScreen />}
+        {!team && tab !== 'account' && <div className="screen muted">Loading…</div>}
+        {team && tab === 'matches' && <MatchesScreen key={team.id} teamId={team.id} onOpen={setOpenMatchId} />}
+        {team && tab === 'squad' && <SquadScreen key={team.id} teamId={team.id} />}
+        {team && tab === 'stats' && <StatsScreen key={team.id} team={team} />}
         {tab === 'account' && <AccountScreen />}
       </main>
       <nav className="tabbar">

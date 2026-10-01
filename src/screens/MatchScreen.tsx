@@ -14,6 +14,7 @@ import {
 } from '../lib/matchState';
 import { seasonContext } from '../lib/seasonStats';
 import { useNow, useWakeLock } from '../hooks';
+import { teamOf } from '../teams';
 import type { Match, MatchEvent, Player } from '../types';
 import { Stepper } from './MatchesScreen';
 
@@ -21,8 +22,23 @@ type Sheet = { mode: 'off'; playerId: string } | { mode: 'on'; playerId: string 
 
 export default function MatchScreen({ matchId, onBack }: { matchId: string; onBack: () => void }) {
   const match = useLiveQuery(() => db.matches.get(matchId).then((m) => m ?? null), [matchId]);
-  const players = useLiveQuery(() => db.players.orderBy('createdAt').toArray(), []);
-  const allMatches = useLiveQuery(() => db.matches.toArray(), []);
+  // Only this match's team: other teams' players and matches don't belong in
+  // its lists, suggestions or season context.
+  const teamId = match ? teamOf(match) : undefined;
+  const players = useLiveQuery<Player[] | null>(
+    () =>
+      teamId === undefined
+        ? null
+        : db.players
+            .orderBy('createdAt')
+            .filter((p) => teamOf(p) === teamId)
+            .toArray(),
+    [teamId],
+  );
+  const allMatches = useLiveQuery<Match[] | null>(
+    () => (teamId === undefined ? null : db.matches.filter((m) => teamOf(m) === teamId).toArray()),
+    [teamId],
+  );
 
   // Match was deleted (or a stale id was remembered): go back to the list.
   useEffect(() => {

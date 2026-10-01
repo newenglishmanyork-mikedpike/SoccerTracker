@@ -4,10 +4,21 @@ import { addMatch, deleteMatch } from '../data';
 import { db } from '../db';
 import { prettyDate, today } from '../lib/format';
 import { computeMatchState } from '../lib/matchState';
+import { teamOf } from '../teams';
 
-export default function MatchesScreen({ onOpen }: { onOpen: (id: string) => void }) {
-  const matches = useLiveQuery(() => db.matches.orderBy('createdAt').reverse().toArray(), []) ?? [];
-  const playerCount = useLiveQuery(() => db.players.filter((p) => !p.archived).count(), []) ?? 0;
+export default function MatchesScreen({ teamId, onOpen }: { teamId: string; onOpen: (id: string) => void }) {
+  const matches =
+    useLiveQuery(
+      () =>
+        db.matches
+          .orderBy('createdAt')
+          .reverse()
+          .filter((m) => teamOf(m) === teamId)
+          .toArray(),
+      [teamId],
+    ) ?? [];
+  const inTeam = (p: { teamId?: string; archived?: boolean }) => !p.archived && teamOf(p) === teamId;
+  const playerCount = useLiveQuery(() => db.players.filter(inTeam).count(), [teamId]) ?? 0;
   const [creating, setCreating] = useState(false);
   const [opponent, setOpponent] = useState('');
   const [date, setDate] = useState(today());
@@ -17,8 +28,9 @@ export default function MatchesScreen({ onOpen }: { onOpen: (id: string) => void
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    const players = await db.players.filter((p) => !p.archived).toArray();
+    const players = await db.players.filter(inTeam).toArray();
     const id = await addMatch({
+      teamId,
       date,
       opponent: opponent.trim() || 'Opponent',
       onField: onField ?? defaultOnField,

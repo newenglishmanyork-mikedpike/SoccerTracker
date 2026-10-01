@@ -2,10 +2,19 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { addPlayer, updatePlayer } from '../data';
 import { db } from '../db';
+import { teamOf } from '../teams';
 import type { Player } from '../types';
 
-export default function SquadScreen() {
-  const players = useLiveQuery(() => db.players.orderBy('createdAt').toArray(), []) ?? [];
+export default function SquadScreen({ teamId }: { teamId: string }) {
+  const players =
+    useLiveQuery(
+      () =>
+        db.players
+          .orderBy('createdAt')
+          .filter((p) => teamOf(p) === teamId)
+          .toArray(),
+      [teamId],
+    ) ?? [];
   const [name, setName] = useState('');
   const [number, setNumber] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -21,7 +30,7 @@ export default function SquadScreen() {
     const n = parseInt(number, 10);
     setName('');
     setNumber('');
-    await addPlayer({ name: trimmed, number: isNaN(n) ? undefined : n });
+    await addPlayer({ name: trimmed, number: isNaN(n) ? undefined : n, teamId });
   };
 
   return (
