@@ -26,6 +26,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # Firebase web config for cross-device sync (Settings → Secrets and
+          # variables → Actions → Variables). Empty = local-only app.
+          VITE_FIREBASE_CONFIG: ${{ vars.FIREBASE_CONFIG }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

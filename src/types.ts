@@ -5,6 +5,8 @@ export interface Player {
   /** Archived players are hidden from new matches but keep their history. */
   archived?: boolean;
   createdAt: number;
+  /** Last local change, used to resolve sync conflicts (newest wins). */
+  updatedAt?: number;
 }
 
 /**
@@ -36,4 +38,6 @@ export interface Match {
   events: MatchEvent[];
   finished: boolean;
   createdAt: number;
+  /** Last local change, used to resolve sync conflicts (newest wins). */
+  updatedAt?: number;
 }

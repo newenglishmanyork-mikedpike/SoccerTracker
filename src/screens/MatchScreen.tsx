@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState } from 'react';
-import { db, updateMatch } from '../db';
+import { updateMatch } from '../data';
+import { db } from '../db';
 import { clock, mins, prettyDate } from '../lib/format';
 import {
   computeMatchState,
