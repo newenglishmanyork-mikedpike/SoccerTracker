@@ -232,3 +232,6 @@ h2 { font-size: 1.05rem; margin: 0; }
 .team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .caret { color: var(--muted); font-size: 0.8rem; }
 .teambar + .content .banner { margin-top: 8px; }
+
+.notice { margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--primary-soft); font-size: 0.9rem; }
+.notice.warn { background: var(--warn-soft); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }

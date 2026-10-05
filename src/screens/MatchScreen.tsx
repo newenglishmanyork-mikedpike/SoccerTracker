@@ -18,7 +18,15 @@ import { teamOf } from '../teams';
 import type { Match, MatchEvent, Player } from '../types';
 import { Stepper } from './MatchesScreen';
 
-type Sheet = { mode: 'off'; playerId: string } | { mode: 'on'; playerId: string } | null;
+const MIN_ON_FIELD = 2;
+const MAX_ON_FIELD = 11;
+
+type Sheet =
+  | { mode: 'off'; playerId: string }
+  | { mode: 'on'; playerId: string }
+  // Players-per-side was reduced: pick who comes off until it fits.
+  | { mode: 'reduce' }
+  | null;
 
 export default function MatchScreen({ matchId, onBack }: { matchId: string; onBack: () => void }) {
   const match = useLiveQuery(() => db.matches.get(matchId).then((m) => m ?? null), [matchId]);
@@ -85,7 +93,20 @@ function MatchView({
       lineupIds: isPresent ? m.lineupIds : m.lineupIds.filter((p) => p !== id),
     }));
 
+  /** Change players-per-side by ±1, applied to the saved value so fast taps all count. */
+  const stepOnField = (d: 1 | -1, after?: (n: number) => void) =>
+    update((m) => {
+      const onField = Math.min(MAX_ON_FIELD, Math.max(MIN_ON_FIELD, m.onField + d));
+      after?.(onField);
+      return { ...m, onField, lineupIds: m.lineupIds.slice(0, onField) };
+    });
+
   const lastEvent = match.events[match.events.length - 1];
+  const undoLabel = !lastEvent
+    ? ''
+    : lastEvent.type === 'PERIOD_START' && s.period === 1
+      ? 'Kick off'
+      : describeEvent(lastEvent, name);
 
   return (
     <div className="app">
@@ -122,13 +143,13 @@ function MatchView({
             )}
             {s.started && s.running && (
               <button className="btn warn big" onClick={() => push({ type: 'PERIOD_END', t: Date.now() })}>
-                End period {s.period}
+                Pause
               </button>
             )}
             {s.started && !s.running && (
               <>
                 <button className="btn primary big" onClick={() => push({ type: 'PERIOD_START', t: Date.now() })}>
-                  Start period {s.period + 1}
+                  Restart
                 </button>
                 <button
                   className="btn big"
@@ -144,7 +165,7 @@ function MatchView({
                 onClick={() => update(undoLast)}
                 title="Undo the last action"
               >
-                ↶ Undo: {describeEvent(lastEvent, name)}
+                ↶ Undo: {undoLabel}
               </button>
             )}
           </div>
@@ -162,9 +183,7 @@ function MatchView({
             byId={byId}
             ctxStarts={ctx.starts}
             ctxMs={ctx.seasonMs}
-            onFieldChange={(n) =>
-              update((m) => ({ ...m, onField: n, lineupIds: m.lineupIds.slice(0, n) }))
-            }
+            onFieldStep={(d) => stepOnField(d)}
             toggleLineup={(id) =>
               update((m) => {
                 if (m.lineupIds.includes(id)) return { ...m, lineupIds: m.lineupIds.filter((p) => p !== id) };
@@ -174,6 +193,12 @@ function MatchView({
             }
             setLineup={(ids) => update((m) => ({ ...m, lineupIds: ids }))}
             setPresent={setPresent}
+            setAllPresent={() =>
+              update((m) => ({
+                ...m,
+                presentIds: [...m.presentIds, ...absent.filter((id) => !m.presentIds.includes(id))],
+              }))
+            }
           />
         ) : (
           <Live
@@ -189,6 +214,12 @@ function MatchView({
               if (s.onPitch.length < match.onField) push({ type: 'ON', playerId: id, t: Date.now() });
               else setSheet({ mode: 'on', playerId: id });
             }}
+            onFieldStep={(d) =>
+              stepOnField(d, (n) => {
+                if (s.onPitch.length > n) setSheet({ mode: 'reduce' });
+              })
+            }
+            onReduce={() => setSheet({ mode: 'reduce' })}
             setPresent={setPresent}
           />
         )}
@@ -198,6 +229,7 @@ function MatchView({
         <SubSheet
           sheet={sheet}
           s={s}
+          onField={match.onField}
           present={present}
           byId={byId}
           ctx={ctx}
@@ -208,7 +240,8 @@ function MatchView({
           }}
           onOff={(id) => {
             push({ type: 'OFF', playerId: id, t: Date.now() });
-            setSheet(null);
+            // When cutting players-per-side, keep asking until it fits.
+            if (sheet.mode !== 'reduce' || s.onPitch.length - 1 <= match.onField) setSheet(null);
           }}
         />
       )}
@@ -222,8 +255,8 @@ function Scoreboard({ match, s, onOppGoal }: { match: Match; s: MatchState; onOp
     : !s.started
       ? 'Not started'
       : s.running
-        ? `Period ${s.period} · ${clock(s.periodClockMs)}`
-        : `Break after period ${s.period}`;
+        ? 'Playing'
+        : 'Paused';
   return (
     <div className="scoreboard">
       <div className="team">
@@ -258,10 +291,11 @@ function Setup({
   byId,
   ctxStarts,
   ctxMs,
-  onFieldChange,
+  onFieldStep,
   toggleLineup,
   setLineup,
   setPresent,
+  setAllPresent,
 }: {
   match: Match;
   present: string[];
@@ -269,10 +303,11 @@ function Setup({
   byId: Map<string, Player>;
   ctxStarts: Record<string, number>;
   ctxMs: Record<string, number>;
-  onFieldChange: (n: number) => void;
+  onFieldStep: (d: 1 | -1) => void;
   toggleLineup: (id: string) => void;
   setLineup: (ids: string[]) => void;
   setPresent: (id: string, present: boolean) => void;
+  setAllPresent: () => void;
 }) {
   const suggestLineup = () => {
     // Fewest starts first, then fewest season minutes.
@@ -286,7 +321,7 @@ function Setup({
     <div className="screen">
       <div className="card setup-bar">
         <span className="grow">Players on the pitch</span>
-        <Stepper value={match.onField} onChange={onFieldChange} min={3} max={11} />
+        <Stepper value={match.onField} onStep={onFieldStep} min={MIN_ON_FIELD} max={MAX_ON_FIELD} />
       </div>
 
       <div className="section-head">
@@ -300,7 +335,11 @@ function Setup({
           Suggest
         </button>
       </div>
-      <p className="hint">Tap players to pick the starters. “Suggest” picks those with the fewest starts this season.</p>
+      {present.length === 0 ? (
+        <p className="hint">Nobody is marked as here yet. Tap players below as they arrive.</p>
+      ) : (
+        <p className="hint">Tap players to pick the starters. “Suggest” picks those with the fewest starts this season.</p>
+      )}
 
       <ul className="list">
         {present.map((id) => {
@@ -326,7 +365,14 @@ function Setup({
         })}
       </ul>
 
-      <AbsentList absent={absent} byId={byId} setPresent={setPresent} />
+      <AbsentList
+        absent={absent}
+        byId={byId}
+        setPresent={setPresent}
+        title="Not here yet"
+        action="Here"
+        onAll={setAllPresent}
+      />
     </div>
   );
 }
@@ -335,24 +381,46 @@ function AbsentList({
   absent,
   byId,
   setPresent,
+  title = 'Not here',
+  action = 'Arrived',
+  onAll,
 }: {
   absent: string[];
   byId: Map<string, Player>;
   setPresent: (id: string, present: boolean) => void;
+  title?: string;
+  action?: string;
+  /** Before kick-off: mark everyone as here in one tap. */
+  onAll?: () => void;
 }) {
   if (absent.length === 0) return null;
   return (
     <>
-      <h2 className="section-title">Not here ({absent.length})</h2>
+      <div className="section-head">
+        <h2 className="section-title">
+          {title} ({absent.length})
+        </h2>
+        {onAll && absent.length > 1 && (
+          <button className="btn small" onClick={onAll}>
+            All here
+          </button>
+        )}
+      </div>
       <ul className="list">
         {absent.map((id) => {
           const p = byId.get(id);
           return (
-            <li key={id} className="row dim">
+            <li key={id} className="row dim tappable" onClick={() => setPresent(id, true)}>
               <Shirt p={p} />
               <span className="grow name">{p?.name}</span>
-              <button className="btn small" onClick={() => setPresent(id, true)}>
-                Arrived
+              <button
+                className="btn small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPresent(id, true);
+                }}
+              >
+                {action}
               </button>
             </li>
           );
@@ -385,6 +453,8 @@ function Live({
   onGoal,
   onSubTap,
   onBenchTap,
+  onFieldStep,
+  onReduce,
   setPresent,
 }: {
   match: Match;
@@ -396,20 +466,40 @@ function Live({
   onGoal: (id: string) => void;
   onSubTap: (id: string) => void;
   onBenchTap: (id: string) => void;
+  onFieldStep: (d: 1 | -1) => void;
+  onReduce: () => void;
   setPresent: (id: string, present: boolean) => void;
 }) {
   const bench = present.filter((id) => !s.onPitch.includes(id));
   const benchOrder = suggestOn(bench, s.playerMs, ctx);
   const offOrder = suggestOff(s.onPitch, s.playerMs, ctx);
-  const nextOff = bench.length > 0 ? offOrder[0] : undefined;
-  const fair = fairShareMs(match.onField, s.clockMs, present.length);
+  const fair = fairShareMs(s.playerMs, present.length);
   const short = match.onField - s.onPitch.length;
+  // Only suggest someone come off when the pitch is full and there's a sub waiting.
+  const nextOff = bench.length > 0 && short <= 0 ? offOrder[0] : undefined;
 
   return (
     <div className="screen">
+      <div className="card setup-bar">
+        <span className="grow">Players on the pitch</span>
+        <Stepper value={match.onField} onStep={onFieldStep} min={MIN_ON_FIELD} max={MAX_ON_FIELD} />
+      </div>
       <p className="hint">
         Fair share so far: <strong>{mins(fair)}</strong> each · {present.length} players here
       </p>
+      {short > 0 && bench.length > 0 && (
+        <p className="notice">
+          Room for {short} more on the pitch. Tap <strong>On</strong> next to a bench player.
+        </p>
+      )}
+      {short < 0 && (
+        <p className="notice warn">
+          {-short} too many on the pitch for {match.onField}v{match.onField}.{' '}
+          <button className="btn small" onClick={onReduce}>
+            Choose who comes off
+          </button>
+        </p>
+      )}
 
       <h2 className="section-title">
         On the pitch ({s.onPitch.length}/{match.onField})
@@ -476,6 +566,7 @@ function Live({
 function SubSheet({
   sheet,
   s,
+  onField,
   present,
   byId,
   ctx,
@@ -485,6 +576,7 @@ function SubSheet({
 }: {
   sheet: NonNullable<Sheet>;
   s: MatchState;
+  onField: number;
   present: string[];
   byId: Map<string, Player>;
   ctx: ReturnType<typeof seasonContext>;
@@ -492,15 +584,27 @@ function SubSheet({
   onSub: (onId: string, offId: string) => void;
   onOff: (id: string) => void;
 }) {
-  const subject = byId.get(sheet.playerId)?.name;
+  const subject = sheet.mode === 'reduce' ? '' : byId.get(sheet.playerId)?.name;
   const bench = present.filter((id) => !s.onPitch.includes(id));
   const options =
     sheet.mode === 'off' ? suggestOn(bench, s.playerMs, ctx) : suggestOff(s.onPitch, s.playerMs, ctx);
+  const excess = s.onPitch.length - onField;
+  const title =
+    sheet.mode === 'off'
+      ? `${subject} off — who comes on?`
+      : sheet.mode === 'on'
+        ? `${subject} on — who comes off?`
+        : `Now ${onField}v${onField}: who comes off?${excess > 1 ? ` (${excess} to go)` : ''}`;
+  const choose = (id: string) => {
+    if (sheet.mode === 'off') onSub(id, sheet.playerId);
+    else if (sheet.mode === 'on') onSub(sheet.playerId, id);
+    else onOff(id);
+  };
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <h2>{sheet.mode === 'off' ? `${subject} off — who comes on?` : `${subject} on — who comes off?`}</h2>
+        <h2>{title}</h2>
         {options.length === 0 && <p className="hint">Nobody available.</p>}
         <ul className="list">
           {options.map((id, i) => {
@@ -509,7 +613,7 @@ function SubSheet({
               <li
                 key={id}
                 className={`row tappable ${i === 0 ? 'selected' : ''}`}
-                onClick={() => (sheet.mode === 'off' ? onSub(id, sheet.playerId) : onSub(sheet.playerId, id))}
+                onClick={() => choose(id)}
               >
                 <Shirt p={p} />
                 <span className="grow name-line">

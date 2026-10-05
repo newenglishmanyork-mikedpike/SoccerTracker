@@ -109,9 +109,23 @@ describe('suggestions', () => {
     expect(suggestOff(['a', 'b', 'k'], ms, ctx)).toEqual(['k', 'a', 'b']);
   });
 
-  it('computes fair share', () => {
-    expect(fairShareMs(7, 40 * MIN, 10)).toBe(28 * MIN);
-    expect(fairShareMs(7, 40 * MIN, 5)).toBe(40 * MIN); // fewer players than spots
+  it('computes fair share from minutes actually played', () => {
+    // 7 on the pitch for 40 minutes, 10 players here.
+    const ms = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`p${i}`, 40 * MIN]));
+    expect(fairShareMs(ms, 10)).toBe(28 * MIN);
+    expect(fairShareMs({}, 0)).toBe(0);
+  });
+
+  it('fair share follows a mid-game format change (4v4 then 5v5)', () => {
+    const events: MatchEvent[] = [
+      ...['a', 'b', 'c', 'd'].map((playerId): MatchEvent => ({ type: 'START', playerId, t: at(0) })),
+      { type: 'PERIOD_START', t: at(0) },
+      { type: 'ON', playerId: 'e', t: at(10) }, // 5th player arrives, go 5v5
+    ];
+    const s = computeMatchState(events, at(20));
+    // 4 players x 10 min + 5 players x 10 min = 90 player-minutes over 5 players.
+    expect(fairShareMs(s.playerMs, 5)).toBe(18 * MIN);
+    expect(s.playerMs.e).toBe(10 * MIN);
   });
 });
 

@@ -6,9 +6,9 @@ so every player gets fair game time across a match and a season.
 - **Teams** – coach more than one team? Switch with the team button at the top; each team has its own
   squad, matches and season stats.
 - **Squad** – enter your players once.
-- **Match setup** – mark who's here (late arrivals can be added any time), pick the starting lineup
+- **Match setup** – everyone starts as *not here*; tap players in as they arrive (or *All here*), pick the starting lineup
   (or tap *Suggest* to pick the players with the fewest starts this season).
-- **Live match** – running clock and score, tap ⚽ when someone scores, tap *Sub* to swap players.
+- **Live match** – running clock with *Pause*/*Restart*, score, change players-per-side mid-game (e.g. 4v4 → 5v5), tap ⚽ when someone scores, tap *Sub* to swap players.
   The bench is ordered by who has played least, with **Next on** / **Next off** suggestions,
   and each player's minutes are shown against the team's fair share. *Undo* reverses the last action.
 - **Season** – games, starts, total/average minutes and goals per player, with players falling
