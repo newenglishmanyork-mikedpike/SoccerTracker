@@ -105,10 +105,16 @@ export function undoLast(m: Match): Match {
   return { ...m, events };
 }
 
-/** Fair share of game time per player so far, if everyone present played equally. */
-export function fairShareMs(onField: number, clockMs: number, presentCount: number): number {
+/**
+ * Fair share of game time per player so far: all the minutes actually played
+ * (by anyone) split evenly between the players here. Based on real minutes
+ * rather than players-per-side, so it stays right when the format changes
+ * mid-game (e.g. 4v4 to 5v5) or the team plays a player short.
+ */
+export function fairShareMs(playerMs: Record<string, number>, presentCount: number): number {
   if (presentCount <= 0) return 0;
-  return (Math.min(onField, presentCount) * clockMs) / presentCount;
+  const total = Object.values(playerMs).reduce((a, b) => a + b, 0);
+  return total / presentCount;
 }
 
 export interface SeasonContext {
@@ -147,9 +153,9 @@ export function describeEvent(e: MatchEvent, name: (id: string) => string): stri
     case 'START':
       return `${name(e.playerId)} starts`;
     case 'PERIOD_START':
-      return 'Period start';
+      return 'Restart';
     case 'PERIOD_END':
-      return 'Period end';
+      return 'Pause';
     case 'SUB':
       return `${name(e.onId)} on for ${name(e.offId)}`;
     case 'ON':

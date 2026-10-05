@@ -28,13 +28,13 @@ export default function MatchesScreen({ teamId, onOpen }: { teamId: string; onOp
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    const players = await db.players.filter(inTeam).toArray();
     const id = await addMatch({
       teamId,
       date,
       opponent: opponent.trim() || 'Opponent',
       onField: onField ?? defaultOnField,
-      presentIds: players.map((p) => p.id),
+      // Everyone starts absent; the coach taps players in as they arrive.
+      presentIds: [],
       lineupIds: [],
       events: [],
       finished: false,
@@ -75,7 +75,7 @@ export default function MatchesScreen({ teamId, onOpen }: { teamId: string; onOp
           </label>
           <label>
             Players on the pitch
-            <Stepper value={onField ?? defaultOnField} onChange={setOnField} min={3} max={11} />
+            <Stepper value={onField ?? defaultOnField} onChange={setOnField} min={2} max={11} />
           </label>
           <div className="actions">
             <button type="button" className="btn ghost" onClick={() => setCreating(false)}>
@@ -124,24 +124,32 @@ export default function MatchesScreen({ teamId, onOpen }: { teamId: string; onOp
   );
 }
 
+/**
+ * A −/+ number control. `onChange` gets the next value; use `onStep` instead
+ * when the value is saved asynchronously, so quick repeated taps each count
+ * (the caller applies the ±1 to the latest saved value, not the one on screen).
+ */
 export function Stepper({
   value,
   onChange,
+  onStep,
   min,
   max,
 }: {
   value: number;
-  onChange: (n: number) => void;
+  onChange?: (n: number) => void;
+  onStep?: (delta: 1 | -1) => void;
   min: number;
   max: number;
 }) {
+  const step = (d: 1 | -1) => (onStep ? onStep(d) : onChange?.(Math.min(max, Math.max(min, value + d))));
   return (
     <div className="stepper">
-      <button type="button" className="btn small" onClick={() => onChange(Math.max(min, value - 1))}>
+      <button type="button" className="btn small" onClick={() => step(-1)} disabled={value <= min}>
         −
       </button>
       <span>{value}</span>
-      <button type="button" className="btn small" onClick={() => onChange(Math.min(max, value + 1))}>
+      <button type="button" className="btn small" onClick={() => step(1)} disabled={value >= max}>
         +
       </button>
     </div>
